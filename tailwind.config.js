@@ -5,8 +5,15 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
-    sccreens: {
+    extend: {
+      colors : {
+        mainGreenBg: '#154535',
+      },
+      boxShadow : {
+        
+      }
+    },
+    screens: {
       "sm": "640px",
       "md": "768px",
       "lg": "1024px",

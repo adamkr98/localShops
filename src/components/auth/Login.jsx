@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+{/*import React, { useState } from "react"; DO NOT NEED THIS COMPONENT. SEE REGISTER.jsx!!!!
 import supabase from "../../config/supabaseClient";
 
 function LogIn() {
@@ -56,4 +56,4 @@ function LogIn() {
     );
 } 
 
-export default LogIn;
+export default LogIn;*/}
