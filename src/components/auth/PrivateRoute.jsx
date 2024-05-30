@@ -1,9 +1,9 @@
 import { Navigate } from "react-router-dom";
 import PropTypes from 'prop-types';
 
-const PrivateRoute = ({ isAuthenticated, component: Component, ...rest }) => {
+const PrivateRoute = ({ isAuthenticated, component: Component, logOutUser, ...rest }) => {
   return isAuthenticated ? (
-    <Component {...rest} />
+    <Component logOutUser={logOutUser} {...rest} />
   ) : (
     <Navigate to="/" />
   );
@@ -12,6 +12,7 @@ const PrivateRoute = ({ isAuthenticated, component: Component, ...rest }) => {
 PrivateRoute.propTypes = {
   isAuthenticated: PropTypes.bool.isRequired, // User object from supabase
   component: PropTypes.elementType.isRequired,
+  logOutUser: PropTypes.func.isRequired,
 };
 
 export default PrivateRoute;

@@ -1,9 +1,9 @@
 import React from "react";
 
-function MainBuyerPage ({ isAuthenticated }) {
+function MainBuyerPage ({ isAuthenticated, logOutUser }) {
     
     if(!isAuthenticated) {
-        <div className="w-full h-[100vh] bg bg-white">
+        <div className="w-full h-[100vh]">
             <p>You need to be logged in to access this page!</p>
         </div>
     }
@@ -11,7 +11,7 @@ function MainBuyerPage ({ isAuthenticated }) {
     return (
         <div className="w-full h-[100vh] bg bg-orange-600">
             <p>Buyer Profile Main Page</p>
-            <button>SignOut</button>
+            <button onClick={logOutUser}>SignOut</button>
         </div>
     )
 }

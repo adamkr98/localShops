@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from "react";
 import Header from "../../Header/Header";
+import supabase from "../../../config/supabaseClient";
+import { info } from "autoprefixer";
 
-function MainSellerPage() {
+function MainSellerPage({ logOutUser }) {
+
 
     const loadProductData = (e) => {
         console.log(e.target.id);
     }
+
+    
 
     const divs = Array.from({ length: 22 }, (_, index) => (
         <div key={index} onClick={(e) => {loadProductData(e); openModal(); }} className="w-[90vw] h-[40vh] bg bg-white md:w-[15rem] md:h-[15rem] md:mr-8 md:mb-4 shadow-lg">Div {index + 1}
@@ -32,12 +37,83 @@ function MainSellerPage() {
        setIsModalOpen((prev) => !prev);
     } 
 
+    const loadUser = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+
+            if(user) {
+                console.log(user);
+                return user;
+            } else {
+                console.message("User doesnt exist!")
+                return null;
+            }
+        } catch (error) {
+            console.message(error);
+            return null;
+        }
+    }
+
+    const [infoSaved, setInfoSaved] = useState([
+        {
+         user_id: "",
+         productName: "", 
+         productProvenance: "",
+         productCategory: "",
+         quantityKg: "",
+         quantityPiece: "",
+         harvestedOn: "",
+         typeOfCulture: "",
+        },
+    ]);
+
+    
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setInfoSaved(prevState => ({
+            ...prevState,
+            [name]: value
+        }));
+    };
+
+    useEffect(() => {
+        console.log(infoSaved);
+    })
+    
+    const sendProductInfo = async () => {
+        try {
+            const userId = await loadUser();
+            const { data, error } = await supabase
+            .from('productsList')
+            .upsert({ 
+                user_id: userId.id,
+                productName: infoSaved.productName, 
+                productProvenance: infoSaved.productProvenance,
+                productCategory: infoSaved.productCategory,
+                productQuantityKg: infoSaved.quantityKg,
+                productQuantityPiece: infoSaved.quantityPiece,
+                harvestedOn: infoSaved.harvestedOn,
+                typeOfCulture: infoSaved.typeOfCulture,
+             })
+            .select()
+
+            if (error) {
+                console.error('Error inserting product data:', error.message);
+            } else {
+                console.log('Product data inserted successfully:', data);
+            }
+        } catch (error) {
+            console.error('Unexpected error:', error.message);
+        }
+    };
+
     return (
         <>
             <Header />
 
             <div className="w-full md:w-full md:h-fit md:border md:bg-[#fafafa] md:flex md:flex-col md:justify-between">
             <div className="md:w-full md:flex md:flex-col md:items-end">
+            <button onClick={logOutUser}>SignOut</button>
                         
                         <div className="w-full h-[10vh] flex justify-around items-center md:w-full md:h-[6rem] md:bg md:bg-[#fafafa] md:flex md:justify-end md:mb-7 md:mt-4 md:pr-[10vw] md:sticky md:top-0 md:shadow-md">
 
@@ -77,11 +153,12 @@ function MainSellerPage() {
                                 <div className="md:w-[25rem] md:flex md:flex-row md:justify-between">
                                     <div className="md:w-[10vw] md:h-fit md:flex md:flex-col">
                                         <label htmlFor="productName" className="md:w-fit md:h-fit">Product Name</label>
-                                        <input type="text" className="md:w-full md:h-[2rem] rounded-md" />   
+                                        <input type="text" name="productName" onChange={handleInputChange} value={infoSaved.productName} className="md:w-full md:h-[2rem] rounded-md" /> 
+                                        
                                     </div>
                                     <div className="md:w-[10vw] md:h-fit md:flex md:flex-col">
                                         <label htmlFor="">Provenance</label>
-                                        <input type="text" className="md:w-full md:h-[2rem] rounded-md" />
+                                        <input type="text" name="productProvenance" onChange={handleInputChange} value={infoSaved.productProvenance} className="md:w-full md:h-[2rem] rounded-md" />
                                     </div>
                                 </div>
                                 <div className="md:w-[25rem] md:h-fit md:flex md:flex-col md:justify-between">
@@ -90,17 +167,17 @@ function MainSellerPage() {
                                     <div className="md:w-full md:flex md:flex-row md:justify-between">
                                         <div className="md:w-fit md:h-fit md:mr-15 md:flex md:flex-col md:mr-12">
                                             <label htmlFor="quantityKg" className="md:w-fit whitespace-nowrap">(per kg)</label>
-                                            <input type="number" id="quantityKg" className="w-[10vw] h-[2rem] pl-2 rounded-md" />
+                                            <input type="number" name="quantityKg" onChange={handleInputChange} value={infoSaved.quantityKg} id="quantityKg" className="w-[10vw] h-[2rem] pl-2 rounded-md" />
                                         </div>
                                         <div className="md:w-fit md:flex md:flex-col">
                                             <label htmlFor="quantityPiece" className="md:w-[3rem] whitespace-nowrap">(per piece)</label>
-                                            <input type="number" id="quantityPiece" className="w-[10vw] h-[2rem] pl-2 rounded-md" />
+                                            <input type="number" name="quantityPiece" onChange={handleInputChange} value={infoSaved.quantityPiece} id="quantityPiece" className="w-[10vw] h-[2rem] pl-2 rounded-md" />
                                             </div>
                                         </div>
                                     </div>
                                     <div className="md:w-[25rem] md:flex md:flex-col">
                                         <label htmlFor="category" className="md:w-[10vw] md:h-[3rem]">Category</label>
-                                        <select type="text" className="w-[10vw] h-[2rem] mb-1 rounded-md bg-gray-200">
+                                        <select type="text" name="productCategory" onChange={handleInputChange} value={infoSaved.productCategory} className="w-[10vw] h-[2rem] mb-1 rounded-md bg-gray-200">
                                             <option value="Vegetables">Vegetables</option>
                                             <option value="Fruits">Fruits</option>
                                             <option value="Meat">Meat</option>
@@ -109,11 +186,11 @@ function MainSellerPage() {
                                     </div>
                                     <div className="md:w-[25rem] md:h-[4rem] md:flex md:flex-col">
                                         <label htmlFor="date" className="md:h-fit">Date</label>
-                                        <input type="date" id="date" className="w-[10vw] h-[2rem] pl-2 rounded-md" />
+                                        <input type="date" name="harvestedOn" onChange={handleInputChange} value={infoSaved.harvestedOn} id="date" className="w-[10vw] h-[2rem] pl-2 rounded-md" />
                                     </div>
                                     <div className="md:w-[25rem] md:h-[4rem] md:flex md:flex-col">
                                         <label htmlFor="cultureType" className="md:h-fit">Culture</label>
-                                        <input type="text" id="cultureType" className="w-[10vw] h-[2rem] pl-2 rounded-md" />
+                                        <input type="text" name="typeOfCulture" onChange={handleInputChange} value={infoSaved.typeOfCulture} id="cultureType" className="w-[10vw] h-[2rem] pl-2 rounded-md" />
                                     </div>
                                 </div>
                                 <div className="md:w-2/5 md:h-[30rem] md:flex md:flex-col md:justify-around border">
@@ -125,7 +202,7 @@ function MainSellerPage() {
                                             <label htmlFor="productDescription" className="md:h-fit">Description</label>
                                             <textarea type="text" id="productDescription" className="w-[25vw] h-[6rem] pl-2 resize-none" />
                                             <div className="md:w-full md:h-fit md:flex md:flex-row md:justify-end">
-                                            <button className="bg-white rounded-md px-4 py-1 md:mt-2 hover:bg-[#D9E6DC] hover:border-2 hover:border-white hover:text-white">Save</button>
+                                            <button className="bg-white rounded-md px-4 py-1 md:mt-2 hover:bg-[#D9E6DC] hover:border-2 hover:border-white hover:text-white" onClick={sendProductInfo}>Save</button>  
                                         </div>
                                         </div>
                                         

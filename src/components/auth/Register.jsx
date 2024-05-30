@@ -1,33 +1,57 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../../config/supabaseClient";
+import bcrypt from 'bcryptjs';
 
 import backgroundImg from "/andrea-de-santis-HTzW5--Rt6c-unsplash.jpg";
 
-function Register() {
+function Register({isAuthenticated, setIsAuthenticated}) {
     const navigate = useNavigate();
 
     const [isLoginBtnAct, setLoginBtnAct] = useState(false);
 {/* const [isUserLoggedIn, setUserLoggedIn] = useState(false);*/}
+    const [activeRole, setActiveRole] = useState('seller');
+    // const [user, setUser] = useState(null);
 
-    const [formData, setFormData] = useState({
-        newEmail: 'ecoleadam98@gmail.com',
-        newPassword: 'azerty',
+    const handleChange = (role) => {
+        setActiveRole(role);
+        console.log(`Role: ${role}`);   
+      };
+
+    const [registeredData, setRegisteredData] = useState({
+        newEmail: '',
+        newPassword: '',
     });
 
+    const [loginData, setLoginData] = useState({
+        email: 'seller1@gmail.com',
+        password: 'seller1',
+    })
+
     const signupUser = async (e) => {
-        e.preventDefault(); 
+        e.preventDefault();
+
+        const hashedPassword = await bcrypt.hash(registeredData.newPassword, 10);
+
         try {
-            let { data, error } = await supabase.auth.signUp({
-                email: formData.newEmail,
-                password: formData.newPassword,
+            const { data:user, error } = await supabase.auth.signUp({
+                email: registeredData.newEmail,
+                password: registeredData.newPassword,
             });
-        
+
+            console.log(user);
             if (error) {
-                alert("Error sigUp:", error.message);
+                alert("Error signUp:", error.message);
             } else {
-                console.log("User signedUp successfully:", data);
-                alert("Signed Up!");
+                console.log("User signedUp successfully:", user);
+                const currentUserId = user.user.id
+
+                try {
+                    await sendUserRole(currentUserId);
+                    alert("SignedUp!");
+                } catch (roleError) {
+                    console.error("Error sending user Role", roleError.message)
+                }
             }
         } catch (error) {
             console.error("Error signing Up:", error.message);
@@ -36,42 +60,93 @@ function Register() {
 
     const loginUser = async (e) => {
         e.preventDefault();
+
         try {
-            let { data, error } = await supabase.auth.signInWithPassword({
-                email: formData.email,
-                password: formData.password,
+            let { data: user, error } = await supabase.auth.signInWithPassword({
+                email: loginData.email,
+                password: loginData.password,
             });
 
+            const currentUserId = user.user.id
+            console.log(currentUserId);
             if (error) {
                 alert("Error login:", error.message);
+                return;
             } else {
-                console.log("User loggedIn successfully:", data.user?.aud);
-                navigate('/buyer');
+                console.log("User loggedIn successfully:", currentUserId);
+
+                    try {
+                        const { data: userRoleData, error: userRoleError } = await supabase
+                        .from('usersData')
+                        .select("userRole")
+                        .eq('user_id', currentUserId);
+    
+                        let userRole = userRoleData[0].userRole;
+    
+                        if(userRoleError) {
+                            console.error("Error fetching user role", userRoleError.message)
+                        } 
+                        
+                        console.log("User role now:", userRole);
+                        if(userRole === "seller") {
+                            navigate('/seller')
+                        } else if(userRole === "buyer") {
+                            navigate('/buyer');
+                        }
+                    } catch (error) {
+                        console.error(error);
+                    }
             }
-  
         } catch (error) {
             console.error("Error log in:", error.message);
         }
     };
 
+  
     
+    const sendUserRole = async (userId) => {
+        try {
+            const { data, error } = await supabase 
+                .from('usersData')
+                .insert([{ user_id: userId ,userRole: activeRole }]);
+           
+                if (error) {
+                    console.error("Error inserting user role:", error.message);
+                    alert("Failed to assign role: " + error.message);
+                } else {
+                    console.log("User role assigned successfully:", data);
+                }
 
+        }   catch (error) {
+            console.error("Error sending role",error.message);
+        }
+  
+    }
+    
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData({
-            ...formData,
-            [name]: value,
-        });
+        if(isLoginBtnAct) {
+            setLoginData({
+                ...loginData,
+                [name]: value,
+            });
+        } else {
+            setRegisteredData({
+                ...registeredData,
+                [name]: value,
+            });
+        }
     };
 
     useEffect(() => {
-        setFormData({
-            email: '',
-            password: '',
-        });
-    }, [isLoginBtnAct]); 
-
-   
+        console.log(loginData.email, loginData.password);
+    })
+    // useEffect(() => {
+    //     setRegisteredData({
+    //         newEmail: '',
+    //         newPassword: '',
+    //     });
+    // }, [isLoginBtnAct]); 
 
     return(
        
@@ -100,9 +175,9 @@ function Register() {
                                 type="text"
                                 name="email"
                                 placeholder=" Your email goes here.."
-                                value={formData.email}
+                                value={loginData.email}
                                 onChange={handleInputChange}
-                                className="border-2 border-red rounded-md w-[20rem] h-[2rem] mb-2"
+                                className="border-2 border-red rounded-md w-[20rem] h-[2rem] mb-2 pl-2"
                             />
 
                             <label htmlFor="newPassword" className="w-fit">Password</label>
@@ -111,9 +186,9 @@ function Register() {
                                 type="password"
                                 name="password"
                                 placeholder=" Your password.."
-                                value={formData.password}
+                                value={loginData.password}
                                 onChange={handleInputChange}
-                                className="border-2 border-red rounded-md w-[20rem] h-[2rem] mb-2"
+                                className="border-2 border-red rounded-md w-[20rem] h-[2rem] mb-2 pl-2"
                             />
 
                             <button
@@ -141,9 +216,9 @@ function Register() {
                                 type="text"
                                 name="newEmail"
                                 placeholder=" Your email goes here.."
-                                value={formData.newEmail}
+                                value={registeredData.newEmail}
                                 onChange={handleInputChange}
-                                className="border-2 border-red rounded-md w-[20rem] h-[2rem] mb-2"
+                                className="border-2 border-red rounded-md w-[20rem] h-[2rem] mb-2 pl-2"
                             />
 
                             <label htmlFor="newPassword" className="w-fit">Password</label>
@@ -152,41 +227,56 @@ function Register() {
                                 type="password"
                                 name="newPassword"
                                 placeholder=" Your password.."
-                                value={formData.newPassword}
+                                value={registeredData.newPassword}
                                 onChange={handleInputChange}
-                                className="border-2 border-red rounded-md w-[20rem] h-[2rem] mb-2"
+                                className="border-2 border-red rounded-md w-[20rem] h-[2rem] mb-2 pl-2"
                             />
 
                             <div className="md:w-[20rem] md:flex md:flex-col md:justify-center">
                                 <label className="md:w-full md:flex md:justify-center">Role</label>
-                                <div className="md:flex md:flex-row">
-                                    <div className="md:w-[10rem] mb-3">
-                                        {/*<label htmlFor="role" className="w-fit">Buyer</label>*/}
-                                        <div id="roleSeller" name="seller" className="border-2 border-[#154535]
-                                        bg-[#154535] text-white md:w-[10rem] rounded-tl-md rounded-bl-md md:flex md:flex-row md:justify-center">
-                                            <p>Buyer</p>
+
+                                <div className="md:w-full md:flex md:flex-row">
+                                    <div className="md:w-1/2 pb-3">
+                                        <div
+                                        id="roleSeller"
+                                        name="seller"
+                                        className={`border-2 border-[#154535] text-white w-full rounded-tl-md rounded-bl-md flex justify-center ${activeRole === 'seller' ? 'bg-[#154535]' : 'bg-white'}`}
+                                        >
+                                        <label
+                                            htmlFor="sellerBtn"
+                                            className={`w-full py-2 text-center cursor-pointer ${activeRole === 'seller' ? 'bg-[#154535] text-white' : 'bg-white rounded-tl-md rounded-bl-md text-black'}`}
+                                        >
+                                            Seller
+                                        </label>
+                                        <input
+                                            type="checkbox"
+                                            id="sellerBtn"
+                                            className="invisible"
+                                            checked={activeRole === 'seller'}
+                                            onChange={() => handleChange('seller')}
+                                        />
                                         </div>
-                                        {/*<input
-                                            id="role"
-                                            type="radio"
-                                            name="seller"
-                                            onChange={handleInputChange}
-                                            className="border-2 border-red rounded-md w-fit h-[2rem] mb-2"
-                                        />*/}
                                     </div>
-                                    <div>
-                                        {/*<label htmlFor="role" className="w-fit">Seller</label>*/}
-                                        <div id="roleBuyer" name="buyer" className="border-2 text-black md:w-[10rem]
-                                        rounded-tr-md rounded-br-md md:flex md:flex-row md:justify-center">
-                                            <p>Buyer</p>
+                                    <div className="md:w-1/2 pb-3">
+                                        <div
+                                        id="roleBuyer"
+                                        name="buyer"
+                                        className={`border-2 border-[#154535] text-black w-full rounded-tr-md rounded-br-md flex justify-center ${activeRole === 'buyer' ? 'bg-[#154535]' : 'bg-white'}`}
+                                        >
+                                        <label
+                                            htmlFor="buyerBtn"
+                                            className={`w-full py-2 text-center cursor-pointer ${activeRole === 'buyer' ? 'bg-[#154535] text-white' : 'bg-white text-black rounded-tl-md rounded-bl-md'}`}
+                                        >
+                                            Buyer
+                                        </label>
+                                        <input
+                                            type="checkbox"
+                                            id="buyerBtn"
+                                            className="invisible"
+                                            checked={activeRole === 'buyer'}
+                                            onChange={() => handleChange('buyer')}
+                                        />
                                         </div>
-                                        {/*<input
-                                            id="role"
-                                            type="radio"
-                                            name="buyer"
-                                            onChange={handleInputChange}
-                                            className="border-2 border-red rounded-md w-fit h-[2rem] mb-2"
-                                        />*/}
                                     </div>
                                 </div>
                             </div>
@@ -200,13 +290,13 @@ function Register() {
                         </form>
                     </>
                     )}
-                {/*      <div>
+                     <div>
       {isAuthenticated ? (
         <p>User is authenticated.</p>
       ) : (
         <p>User is not authenticated.</p>
       )}
-      </div>*/}
+      </div>
                 </div>
 
               

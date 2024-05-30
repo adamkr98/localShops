@@ -15,12 +15,8 @@ import ProtectedRoute from "./components/auth/PrivateRoute.jsx";
 import ReactDOM from "react-dom/client";
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState({});
-
-  useEffect(() => {
-    // Check if user is authenticated when component mounts
-    checkAuth();
-  }, []);
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const checkAuth = async () => {
     try {
@@ -31,49 +27,60 @@ function App() {
         setIsAuthenticated(false); 
       } else {
         console.log("User session before:", user?.aud);
-        setIsAuthenticated(user);
+        setIsAuthenticated(!!user);
         console.log("User session after", user?.aud);
+        return user;
       }
     } catch (error) {
       console.error("Error checking authentication:", error.message);
       setIsAuthenticated(false);
-    }
+    } 
   };
 
   useEffect(() => {
-    console.log(isAuthenticated); // This will log the updated isAuthenticated value
-  }, [isAuthenticated]);
-  
-  {/*
-  const handleLogout = async () => {
-    // Sign out user using Supabase
-    await supabase.auth.signOut();
+    // Check if user is authenticated when component mounts
+    checkAuth();
+  }, []);
 
-    // Update authentication state
-    setIsAuthenticated(false);
-  };
-*/}
+  useEffect(() => {
+    console.log(isAuthenticated ? "Authenticated" : "Not Authenticated"); // This will log the updated isAuthenticated value
+  }, [isAuthenticated]);
+
+  if (isAuthenticated === null) {
+    return <div>Loading...</div>; // Display a loading message or spinner
+  }
+  
+  const logOutUser = async () => {
+    try {
+        let { error } = await supabase.auth.signOut();
+        if (error) throw error; // Explicitly throw the error to be caught in the catch block
+        setIsAuthenticated(false); // Update the authentication state
+        console.log("User logged out successfully");
+      } catch (error) {
+        console.error("Error logging out:", error.message);
+      }
+  }
   // Define your routes outside the return statement
   const router = createBrowserRouter([
     {
       path: "/",
-      element: <Register />,
+      element: <Register isAuthenticated={isAuthenticated} />,
     },
     {
       path: "/buyer",
-      element: <ProtectedRoute isAuthenticated={isAuthenticated} component={MainBuyerPage} />,
+      element: <ProtectedRoute isAuthenticated={isAuthenticated} component={MainBuyerPage} logOutUser={logOutUser} />,
                 
     },
     {
       path: "/seller",
-      element: <MainSellerPage />,
+      element: <ProtectedRoute isAuthenticated={isAuthenticated} component={MainSellerPage} logOutUser={logOutUser} />,
     }
   ]);
 
   // Render the app using RouterProvider
   ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>
-        <RouterProvider router={router} />
+      <RouterProvider router={router} />
     </React.StrictMode>
   );
 }
